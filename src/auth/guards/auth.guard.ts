@@ -1,7 +1,19 @@
-import { CanActivate, type ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  type ExecutionContext,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { eq } from 'drizzle-orm';
 import type { Request } from 'express';
-import { sessionPayloadSchema, type SessionPayload } from '../schemas/session.schema.js';
+import { DRIZZLE, type Database } from '../../db/db.module.js';
+import { sessions } from '../../db/schema.js';
+import {
+  sessionPayloadSchema,
+  type SessionPayload,
+} from '../schemas/session.schema.js';
 
 declare module 'express' {
   interface Request {
@@ -11,12 +23,17 @@ declare module 'express' {
 
 /**
  * Verifies the caller sent a valid, signed session (JWT) in the
- * `Authorization: Bearer <token>` header, and exposes its payload as
- * `request.session` for downstream handlers.
+ * `Authorization: Bearer <token>` header, and that the matching session row
+ * in the database (keyed by the token's `jti` claim) exists, is unexpired
+ * and hasn't been revoked. Exposes the payload as `request.session` for
+ * downstream handlers.
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    @Inject(DRIZZLE) private readonly db: Database,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -36,6 +53,19 @@ export class AuthGuard implements CanActivate {
     const result = sessionPayloadSchema.safeParse(payload);
     if (!result.success) {
       throw new UnauthorizedException('invalid session payload');
+    }
+
+    const [session] = await this.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, result.data.jti));
+
+    if (
+      !session ||
+      session.revokedAt ||
+      Date.now() > session.expiresAt.getTime()
+    ) {
+      throw new UnauthorizedException('invalid or expired session');
     }
 
     request.session = result.data;

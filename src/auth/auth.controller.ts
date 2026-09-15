@@ -49,6 +49,11 @@ export class AuthController {
   @UseInterceptors(new ZodResponseInterceptor(meResponseSchema))
   me(@Req() request: Request) {
     const session = request.session!;
-    return { cpf: session.sub, name: session.name, phone: session.phone };
+    return {
+      id: session.sub,
+      cpf: session.cpf,
+      name: session.name,
+      phone: session.phone,
+    };
   }
 }
