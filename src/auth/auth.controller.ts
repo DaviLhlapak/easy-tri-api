@@ -1,19 +1,54 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import type { Request } from 'express';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
+import { ZodResponseInterceptor } from '../common/interceptors/zod-response.interceptor.js';
 import { AuthService } from './auth.service.js';
-import { RequestOtpDto } from './dto/request-otp.dto.js';
-import { VerifyOtpDto } from './dto/verify-otp.dto.js';
+import { AuthGuard } from './guards/auth.guard.js';
+import {
+  requestOtpBodySchema,
+  requestOtpResponseSchema,
+  type RequestOtpBody,
+} from './schemas/request-otp.schema.js';
+import {
+  verifyOtpBodySchema,
+  verifyOtpResponseSchema,
+  type VerifyOtpBody,
+} from './schemas/verify-otp.schema.js';
+import { meResponseSchema } from './schemas/session.schema.js';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('otp')
-  requestOtp(@Body() body: RequestOtpDto) {
-    return this.authService.requestOtp(body.name, body.cpf, body.phone);
+  @UseInterceptors(new ZodResponseInterceptor(requestOtpResponseSchema))
+  requestOtp(
+    @Body(new ZodValidationPipe(requestOtpBodySchema)) body: RequestOtpBody,
+  ) {
+    return this.authService.requestOtp(body);
   }
 
   @Post('otp/verify')
-  verifyOtp(@Body() body: VerifyOtpDto) {
+  @UseInterceptors(new ZodResponseInterceptor(verifyOtpResponseSchema))
+  verifyOtp(
+    @Body(new ZodValidationPipe(verifyOtpBodySchema)) body: VerifyOtpBody,
+  ) {
     return this.authService.verifyOtp(body.requestId, body.code);
+  }
+
+  @Get('me')
+  @UseGuards(AuthGuard)
+  @UseInterceptors(new ZodResponseInterceptor(meResponseSchema))
+  me(@Req() request: Request) {
+    const session = request.session!;
+    return { cpf: session.sub, name: session.name, phone: session.phone };
   }
 }

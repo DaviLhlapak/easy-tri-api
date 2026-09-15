@@ -1,5 +1,11 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { randomBytes, randomInt, randomUUID } from 'node:crypto';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { randomInt, randomUUID } from 'node:crypto';
+import type {
+  RequestOtpBody,
+  RequestOtpResponse,
+} from './schemas/request-otp.schema.js';
+import type { VerifyOtpResponse } from './schemas/verify-otp.schema.js';
 
 interface OtpRequest {
   id: string;
@@ -11,46 +17,25 @@ interface OtpRequest {
   consumed: boolean;
 }
 
-interface Session {
-  token: string;
-  cpf: string;
-  name: string;
-  phone: string;
-  createdAt: number;
-}
-
 const OTP_TTL_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
-  // Mock storage. In a real implementation these would live in a
+  // Mock storage. In a real implementation this would live in a
   // database/cache (e.g. Redis) instead of process memory.
   private readonly otpRequests = new Map<string, OtpRequest>();
-  private readonly sessions = new Map<string, Session>();
 
-  requestOtp(name: string, cpf: string, phone: string) {
-    const normalizedName = name?.trim();
-    const normalizedCpf = onlyDigits(cpf);
-    const normalizedPhone = onlyDigits(phone);
+  constructor(private readonly jwtService: JwtService) {}
 
-    if (!normalizedName) {
-      throw new BadRequestException('name is required');
-    }
-    if (normalizedCpf.length !== 11) {
-      throw new BadRequestException('cpf must have 11 digits');
-    }
-    if (normalizedPhone.length < 10 || normalizedPhone.length > 11) {
-      throw new BadRequestException('phone must have 10 or 11 digits');
-    }
-
+  requestOtp({ name, cpf, phone }: RequestOtpBody): RequestOtpResponse {
     const id = randomUUID();
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
 
     this.otpRequests.set(id, {
       id,
-      name: normalizedName,
-      cpf: normalizedCpf,
-      phone: normalizedPhone,
+      name,
+      cpf,
+      phone,
       code,
       expiresAt: Date.now() + OTP_TTL_MS,
       consumed: false,
@@ -66,11 +51,7 @@ export class AuthService {
     };
   }
 
-  verifyOtp(requestId: string, code: string) {
-    if (!requestId || !code) {
-      throw new BadRequestException('requestId and code are required');
-    }
-
+  async verifyOtp(requestId: string, code: string): Promise<VerifyOtpResponse> {
     const otpRequest = this.otpRequests.get(requestId);
     if (!otpRequest) {
       throw new UnauthorizedException('invalid requestId');
@@ -88,17 +69,14 @@ export class AuthService {
 
     otpRequest.consumed = true;
 
-    const token = randomBytes(24).toString('hex');
-    this.sessions.set(token, {
-      token,
-      cpf: otpRequest.cpf,
+    const session = await this.jwtService.signAsync({
+      sub: otpRequest.cpf,
       name: otpRequest.name,
       phone: otpRequest.phone,
-      createdAt: Date.now(),
     });
 
     return {
-      session: token,
+      session,
       user: {
         name: otpRequest.name,
         cpf: otpRequest.cpf,
@@ -106,8 +84,4 @@ export class AuthService {
       },
     };
   }
-}
-
-function onlyDigits(value: string): string {
-  return (value ?? '').replace(/\D/g, '');
 }
