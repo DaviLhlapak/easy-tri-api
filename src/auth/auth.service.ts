@@ -9,6 +9,10 @@ import { eq } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
 import { DRIZZLE, type Database } from '../db/db.module.js';
 import { otpRequests, sessions, users } from '../db/schema.js';
+import {
+  OTP_DELIVERY_PORT,
+  type OtpDeliveryPort,
+} from '../notifications/ports/otp-delivery.port.js';
 import type {
   RequestOtpBody,
   RequestOtpResponse,
@@ -24,6 +28,7 @@ export class AuthService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly jwtService: JwtService,
+    @Inject(OTP_DELIVERY_PORT) private readonly otpDelivery: OtpDeliveryPort,
   ) {}
 
   async requestOtp({
@@ -64,12 +69,21 @@ export class AuthService {
       .values({ userId: user.id, code, expiresAt })
       .returning();
 
-    // There is no real SMS/WhatsApp provider here, so the OTP code is
-    // returned directly in the response as mock data instead of being sent
-    // to the user's phone.
+    await this.otpDelivery.sendOtp({
+      phone: user.phone,
+      name: user.name,
+      code,
+    });
+
+    // The mock delivery adapter doesn't actually send anything anywhere, so
+    // it's convenient (and safe) to also return the code in the response
+    // when it's active. Real adapters (Twilio, email, ...) must not leak it.
+    const isMockDelivery =
+      (process.env.OTP_DELIVERY_DRIVER ?? 'mock') === 'mock';
+
     return {
       requestId: otpRequest.id,
-      code: otpRequest.code,
+      ...(isMockDelivery ? { code: otpRequest.code } : {}),
       expiresAt: otpRequest.expiresAt.toISOString(),
     };
   }

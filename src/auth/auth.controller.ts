@@ -3,14 +3,13 @@ import {
   Controller,
   Get,
   Post,
-  Req,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
 import { ZodResponseInterceptor } from '../common/interceptors/zod-response.interceptor.js';
 import { AuthService } from './auth.service.js';
+import { Session } from './decorators/session.decorator.js';
 import { AuthGuard } from './guards/auth.guard.js';
 import {
   requestOtpBodySchema,
@@ -22,7 +21,10 @@ import {
   verifyOtpResponseSchema,
   type VerifyOtpBody,
 } from './schemas/verify-otp.schema.js';
-import { meResponseSchema } from './schemas/session.schema.js';
+import {
+  meResponseSchema,
+  type SessionPayload,
+} from './schemas/session.schema.js';
 
 @Controller('auth')
 export class AuthController {
@@ -47,8 +49,7 @@ export class AuthController {
   @Get('me')
   @UseGuards(AuthGuard)
   @UseInterceptors(new ZodResponseInterceptor(meResponseSchema))
-  me(@Req() request: Request) {
-    const session = request.session!;
+  me(@Session() session: SessionPayload) {
     return {
       id: session.sub,
       cpf: session.cpf,

@@ -21,7 +21,12 @@ export type RequestOtpBody = z.infer<typeof requestOtpBodySchema>;
 
 export const requestOtpResponseSchema = z.object({
   requestId: z.uuid(),
-  code: z.string().regex(/^\d{6}$/),
+  // Only present when OTP_DELIVERY_DRIVER=mock, since a real delivery
+  // adapter (Twilio, email, ...) must not leak the code in the response.
+  code: z
+    .string()
+    .regex(/^\d{6}$/)
+    .optional(),
   expiresAt: z.iso.datetime(),
 });
 
