@@ -2,6 +2,7 @@ import {
   date,
   pgEnum,
   pgTable,
+  text,
   timestamp,
   uuid,
   varchar,
@@ -39,9 +40,6 @@ export const otpRequests = pgTable('otp_requests', {
 export type OtpRequest = typeof otpRequests.$inferSelect;
 export type NewOtpRequest = typeof otpRequests.$inferInsert;
 
-// Sessions are also tracked in the database (keyed by the JWT's `jti` claim)
-// so a session can be looked up/revoked server-side even though the token
-// itself is a signed, stateless JWT.
 export const sessions = pgTable('sessions', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
@@ -65,12 +63,7 @@ export const maritalStatusEnum = pgEnum('marital_status', [
   'other',
 ]);
 
-export const genderEnum = pgEnum('gender', [
-  'male',
-  'female',
-  'other',
-  'prefer_not_to_say',
-]);
+export const genderEnum = pgEnum('gender', ['male', 'female', 'other']);
 
 export const educationLevelEnum = pgEnum('education_level', [
   'none',
@@ -79,13 +72,8 @@ export const educationLevelEnum = pgEnum('education_level', [
   'technical',
   'undergraduate',
   'postgraduate',
-  'master',
-  'doctorate',
 ]);
 
-// One-to-one profile table for the "patient" user type. The app has
-// multiple user types; each gets its own profile table keyed by `userId`
-// instead of cramming type-specific fields into `users`.
 export const patientProfiles = pgTable('patient_profiles', {
   userId: uuid('user_id')
     .primaryKey()
@@ -99,6 +87,10 @@ export const patientProfiles = pgTable('patient_profiles', {
   bornCity: varchar('born_city', { length: 255 }).notNull(),
   bornState: varchar('born_state', { length: 2 }).notNull(),
   occupation: varchar('occupation', { length: 255 }).notNull(),
+  previousIllnesses: text('previous_illnesses').array().notNull().default([]),
+  previousSurgeries: text('previous_surgeries').array().notNull().default([]),
+  familyMedicalHistory: text('family_medical_history'),
+  medications: text('medications').array().notNull().default([]),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
