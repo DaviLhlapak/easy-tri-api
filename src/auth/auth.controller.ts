@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
 import { ZodResponseInterceptor } from '../common/interceptors/zod-response.interceptor.js';
+import { maskCpf } from '../common/utils/mask.js';
 import { AuthService } from './auth.service.js';
 import { Session } from './decorators/session.decorator.js';
 import { AuthGuard } from './guards/auth.guard.js';
@@ -52,7 +53,7 @@ export class AuthController {
   me(@Session() session: SessionPayload) {
     return {
       id: session.sub,
-      cpf: session.cpf,
+      cpf: maskCpf(session.cpf),
       name: session.name,
       phone: session.phone,
     };

@@ -12,8 +12,9 @@ export const sessionPayloadSchema = z.object({
 export type SessionPayload = z.infer<typeof sessionPayloadSchema>;
 
 export const meResponseSchema = z.object({
-  id: z.string().uuid(),
-  cpf: z.string().length(11),
+  id: z.uuid(),
+  // Masked, e.g. "***.***.***-09" - see src/common/utils/mask.ts
+  cpf: z.string().regex(/^\*{3}\.\*{3}\.\*{3}-\d{2}$/),
   name: z.string(),
   phone: z.string().min(10).max(11),
 });

@@ -7,12 +7,7 @@ export const maritalStatusValues = [
   'widowed',
   'other',
 ] as const;
-export const genderValues = [
-  'male',
-  'female',
-  'other',
-  'prefer_not_to_say',
-] as const;
+export const genderValues = ['male', 'female', 'other'] as const;
 export const educationLevelValues = [
   'none',
   'elementary',
@@ -20,8 +15,6 @@ export const educationLevelValues = [
   'technical',
   'undergraduate',
   'postgraduate',
-  'master',
-  'doctorate',
 ] as const;
 
 const stateCode = z

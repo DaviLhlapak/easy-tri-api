@@ -8,7 +8,8 @@ import { JwtService } from '@nestjs/jwt';
 import { eq } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
 import { DRIZZLE, type Database } from '../db/db.module.js';
-import { otpRequests, sessions, users } from '../db/schema.js';
+import { sessions, users, verificationCodes } from '../db/schema.js';
+import { maskCpf } from '../common/utils/mask.js';
 import {
   OTP_DELIVERY_PORT,
   type OtpDeliveryPort,
@@ -65,7 +66,7 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
     const [otpRequest] = await this.db
-      .insert(otpRequests)
+      .insert(verificationCodes)
       .values({ userId: user.id, code, expiresAt })
       .returning();
 
@@ -91,8 +92,8 @@ export class AuthService {
   async verifyOtp(requestId: string, code: string): Promise<VerifyOtpResponse> {
     const [otpRequest] = await this.db
       .select()
-      .from(otpRequests)
-      .where(eq(otpRequests.id, requestId));
+      .from(verificationCodes)
+      .where(eq(verificationCodes.id, requestId));
 
     if (!otpRequest) {
       throw new UnauthorizedException('invalid requestId');
@@ -116,9 +117,9 @@ export class AuthService {
     }
 
     await this.db
-      .update(otpRequests)
+      .update(verificationCodes)
       .set({ consumedAt: new Date() })
-      .where(eq(otpRequests.id, requestId));
+      .where(eq(verificationCodes.id, requestId));
 
     const [session] = await this.db
       .insert(sessions)
@@ -143,7 +144,7 @@ export class AuthService {
       session: token,
       user: {
         name: user.name,
-        cpf: user.cpf,
+        cpf: maskCpf(user.cpf),
         phone: user.phone,
       },
     };

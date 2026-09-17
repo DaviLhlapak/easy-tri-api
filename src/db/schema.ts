@@ -24,7 +24,7 @@ export const users = pgTable('users', {
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
-export const otpRequests = pgTable('otp_requests', {
+export const verificationCodes = pgTable('verification_codes', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
     .notNull()
@@ -37,8 +37,8 @@ export const otpRequests = pgTable('otp_requests', {
     .defaultNow(),
 });
 
-export type OtpRequest = typeof otpRequests.$inferSelect;
-export type NewOtpRequest = typeof otpRequests.$inferInsert;
+export type VerificationCode = typeof verificationCodes.$inferSelect;
+export type NewVerificationCode = typeof verificationCodes.$inferInsert;
 
 export const sessions = pgTable('sessions', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -74,7 +74,7 @@ export const educationLevelEnum = pgEnum('education_level', [
   'postgraduate',
 ]);
 
-export const patientProfiles = pgTable('patient_profiles', {
+export const patients = pgTable('patients', {
   userId: uuid('user_id')
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -99,5 +99,5 @@ export const patientProfiles = pgTable('patient_profiles', {
     .defaultNow(),
 });
 
-export type PatientProfile = typeof patientProfiles.$inferSelect;
-export type NewPatientProfile = typeof patientProfiles.$inferInsert;
+export type Patient = typeof patients.$inferSelect;
+export type NewPatient = typeof patients.$inferInsert;

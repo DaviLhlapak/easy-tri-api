@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module.js';
-import { patientProfiles } from '../db/schema.js';
+import { patients } from '../db/schema.js';
 import type {
   PatientProfileResponse,
   UpsertPatientProfileBody,
@@ -14,8 +14,8 @@ export class PatientsService {
   async getProfile(userId: string): Promise<PatientProfileResponse> {
     const [profile] = await this.db
       .select()
-      .from(patientProfiles)
-      .where(eq(patientProfiles.userId, userId));
+      .from(patients)
+      .where(eq(patients.userId, userId));
 
     if (!profile) {
       throw new NotFoundException('patient profile not found');
@@ -29,10 +29,10 @@ export class PatientsService {
     data: UpsertPatientProfileBody,
   ): Promise<PatientProfileResponse> {
     const [profile] = await this.db
-      .insert(patientProfiles)
+      .insert(patients)
       .values({ userId, ...data })
       .onConflictDoUpdate({
-        target: patientProfiles.userId,
+        target: patients.userId,
         set: { ...data, updatedAt: new Date() },
       })
       .returning();
@@ -42,7 +42,7 @@ export class PatientsService {
 }
 
 function toResponse(
-  profile: typeof patientProfiles.$inferSelect,
+  profile: typeof patients.$inferSelect,
 ): PatientProfileResponse {
   return {
     userId: profile.userId,

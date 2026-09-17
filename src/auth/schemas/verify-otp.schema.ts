@@ -11,7 +11,7 @@ export const verifyOtpResponseSchema = z.object({
   session: z.string().min(1),
   user: z.object({
     name: z.string(),
-    cpf: z.string().length(11),
+    cpf: z.string().regex(/^\*{3}\.\*{3}\.\*{3}-\d{2}$/),
     phone: z.string().min(10).max(11),
   }),
 });

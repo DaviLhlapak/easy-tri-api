@@ -21,13 +21,6 @@ declare module 'express' {
   }
 }
 
-/**
- * Verifies the caller sent a valid, signed session (JWT) in the
- * `Authorization: Bearer <token>` header, and that the matching session row
- * in the database (keyed by the token's `jti` claim) exists, is unexpired
- * and hasn't been revoked. Exposes the payload as `request.session` for
- * downstream handlers.
- */
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(

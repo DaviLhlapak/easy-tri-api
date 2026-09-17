@@ -8,9 +8,6 @@ import { AuthGuard } from './guards/auth.guard.js';
 @Module({
   imports: [
     JwtModule.register({
-      // Global so AuthGuard (used via @UseGuards(AuthGuard) in other feature
-      // modules) can resolve JwtService no matter which module it's
-      // instantiated for.
       global: true,
       secret: process.env.JWT_SECRET ?? 'dev-secret-change-me',
       signOptions: { expiresIn: '1h' },
