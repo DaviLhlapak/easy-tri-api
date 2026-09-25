@@ -1,9 +1,13 @@
 import {
+  boolean,
   date,
+  integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
@@ -75,8 +79,9 @@ export const educationLevelEnum = pgEnum('education_level', [
 ]);
 
 export const patients = pgTable('patients', {
+  id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
-    .primaryKey()
+    .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   birthDate: date('birth_date', { mode: 'string' }).notNull(),
   maritalStatus: maritalStatusEnum('marital_status').notNull(),
@@ -101,3 +106,122 @@ export const patients = pgTable('patients', {
 
 export type Patient = typeof patients.$inferSelect;
 export type NewPatient = typeof patients.$inferInsert;
+
+export const triageTypeEnum = pgEnum('triage_type', [
+  'new',
+  'follow-up',
+  'return',
+  'routine',
+]);
+
+export const triages = pgTable('triages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  patientId: uuid('patient_id')
+    .notNull()
+    .references(() => patients.id, { onDelete: 'cascade' }),
+  triageType: triageTypeEnum('triage_type').notNull(),
+  complaint: text('complaint'),
+  renewPrescription: boolean('renew_prescription').notNull().default(false),
+  requestMedicalExams: boolean('request_medical_exams')
+    .notNull()
+    .default(false),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type Triage = typeof triages.$inferSelect;
+export type NewTriage = typeof triages.$inferInsert;
+
+export const triageExams = pgTable('triage_exams', {
+  triageId: uuid('triage_id')
+    .primaryKey()
+    .references(() => triages.id, { onDelete: 'cascade' }),
+});
+
+export type TriageExam = typeof triageExams.$inferSelect;
+export type NewTriageExam = typeof triageExams.$inferInsert;
+
+export const triagePhysicalSymptoms = pgTable('triage_physical_symptoms', {
+  triageId: uuid('triage_id')
+    .primaryKey()
+    .references(() => triages.id, { onDelete: 'cascade' }),
+  bodyPart: varchar('body_part', { length: 100 }).notNull(),
+  answers: jsonb('answers').notNull().default([]),
+});
+
+export type TriagePhysicalSymptom = typeof triagePhysicalSymptoms.$inferSelect;
+export type NewTriagePhysicalSymptom =
+  typeof triagePhysicalSymptoms.$inferInsert;
+
+export const symptomIntensityEnum = pgEnum('symptom_intensity', [
+  'mild',
+  'moderate',
+  'severe',
+]);
+
+export const triageConstitutionalSymptoms = pgTable(
+  'triage_constitutional_symptoms',
+  {
+    triageId: uuid('triage_id')
+      .primaryKey()
+      .references(() => triages.id, { onDelete: 'cascade' }),
+    symptom: varchar('symptom', { length: 100 }).notNull(),
+    intensity: symptomIntensityEnum('intensity').notNull(),
+    quantity: integer('quantity').notNull().default(1),
+  },
+);
+
+export type TriageConstitutionalSymptom =
+  typeof triageConstitutionalSymptoms.$inferSelect;
+export type NewTriageConstitutionalSymptom =
+  typeof triageConstitutionalSymptoms.$inferInsert;
+
+export const triagePhysicalActivities = pgTable('triage_physical_activities', {
+  triageId: uuid('triage_id')
+    .primaryKey()
+    .references(() => triages.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  daysPerWeek: integer('days_per_week').notNull(),
+  minutesPerDay: integer('minutes_per_day').notNull(),
+});
+
+export type TriagePhysicalActivity =
+  typeof triagePhysicalActivities.$inferSelect;
+export type NewTriagePhysicalActivity =
+  typeof triagePhysicalActivities.$inferInsert;
+
+export const alcoholStatusEnum = pgEnum('alcohol_status', [
+  'never',
+  'former',
+  'current',
+]);
+
+export const smokingStatusEnum = pgEnum('smoking_status', [
+  'never',
+  'former',
+  'current',
+]);
+
+export const triageHabits = pgTable('triage_habits', {
+  triageId: uuid('triage_id')
+    .primaryKey()
+    .references(() => triages.id, { onDelete: 'cascade' }),
+  alcoholStatus: alcoholStatusEnum('alcohol_status').notNull().default('never'),
+  alcoholFrequency: varchar('alcohol_frequency', { length: 100 }),
+  alcoholQuantity: varchar('alcohol_quantity', { length: 100 }),
+  smokingStatus: smokingStatusEnum('smoking_status').notNull().default('never'),
+  cigarettesPerDay: integer('cigarettes_per_day'),
+  smokingYears: integer('smoking_years'),
+  dietDescription: text('diet_description'),
+  dietaryRestrictions: text('dietary_restrictions')
+    .array()
+    .notNull()
+    .default([]),
+});
+
+export type TriageHabits = typeof triageHabits.$inferSelect;
+export type NewTriageHabits = typeof triageHabits.$inferInsert;
