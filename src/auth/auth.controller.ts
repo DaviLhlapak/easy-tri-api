@@ -9,6 +9,8 @@ import {
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
 import { ZodResponseInterceptor } from '../common/interceptors/zod-response.interceptor.js';
 import { maskCpf } from '../common/utils/mask.js';
+import { CurrentClinic } from '../tenant/decorators/current-clinic.decorator.js';
+import type { Clinic } from '../db/schema.js';
 import { AuthService } from './auth.service.js';
 import { Session } from './decorators/session.decorator.js';
 import { AuthGuard } from './guards/auth.guard.js';
@@ -34,17 +36,19 @@ export class AuthController {
   @Post('otp')
   @UseInterceptors(new ZodResponseInterceptor(requestOtpResponseSchema))
   requestOtp(
+    @CurrentClinic() clinic: Clinic,
     @Body(new ZodValidationPipe(requestOtpBodySchema)) body: RequestOtpBody,
   ) {
-    return this.authService.requestOtp(body);
+    return this.authService.requestOtp(clinic.id, body);
   }
 
   @Post('otp/verify')
   @UseInterceptors(new ZodResponseInterceptor(verifyOtpResponseSchema))
   verifyOtp(
+    @CurrentClinic() clinic: Clinic,
     @Body(new ZodValidationPipe(verifyOtpBodySchema)) body: VerifyOtpBody,
   ) {
-    return this.authService.verifyOtp(body.requestId, body.code);
+    return this.authService.verifyOtp(clinic.id, body.requestId, body.code);
   }
 
   @Get('me')

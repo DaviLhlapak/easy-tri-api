@@ -4,6 +4,7 @@ import { z } from 'zod';
 export const sessionPayloadSchema = z.object({
   sub: z.uuid(), // user id
   jti: z.uuid(), // session id (matches the `sessions` table row)
+  clinicId: z.uuid(),
   cpf: z.string().length(11),
   name: z.string(),
   phone: z.string().min(10).max(11),

@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
 import { DRIZZLE, type Database } from '../db/db.module.js';
 import { sessions, users, verificationCodes } from '../db/schema.js';
@@ -32,20 +32,17 @@ export class AuthService {
     @Inject(OTP_DELIVERY_PORT) private readonly otpDelivery: OtpDeliveryPort,
   ) {}
 
-  async requestOtp({
-    name,
-    cpf,
-    phone,
-  }: RequestOtpBody): Promise<RequestOtpResponse> {
+  async requestOtp(
+    clinicId: string,
+    { name, cpf, phone }: RequestOtpBody,
+  ): Promise<RequestOtpResponse> {
     const [existingUser] = await this.db
       .select()
       .from(users)
-      .where(eq(users.cpf, cpf));
+      .where(and(eq(users.clinicId, clinicId), eq(users.cpf, cpf)));
 
     let user: typeof users.$inferSelect;
     if (existingUser) {
-      // Account already exists for this cpf: the submitted name/phone must
-      // match what's on file, otherwise reject instead of overwriting it.
       if (
         !namesMatch(existingUser.name, name) ||
         existingUser.phone !== phone
@@ -58,7 +55,7 @@ export class AuthService {
     } else {
       [user] = await this.db
         .insert(users)
-        .values({ name, cpf, phone })
+        .values({ clinicId, name, cpf, phone })
         .returning();
     }
 
@@ -76,9 +73,6 @@ export class AuthService {
       code,
     });
 
-    // The mock delivery adapter doesn't actually send anything anywhere, so
-    // it's convenient (and safe) to also return the code in the response
-    // when it's active. Real adapters (Twilio, email, ...) must not leak it.
     const isMockDelivery =
       (process.env.OTP_DELIVERY_DRIVER ?? 'mock') === 'mock';
 
@@ -89,7 +83,11 @@ export class AuthService {
     };
   }
 
-  async verifyOtp(requestId: string, code: string): Promise<VerifyOtpResponse> {
+  async verifyOtp(
+    clinicId: string,
+    requestId: string,
+    code: string,
+  ): Promise<VerifyOtpResponse> {
     const [otpRequest] = await this.db
       .select()
       .from(verificationCodes)
@@ -115,6 +113,10 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('user not found');
     }
+  
+    if (user.clinicId !== clinicId) {
+      throw new UnauthorizedException('invalid requestId');
+    }
 
     await this.db
       .update(verificationCodes)
@@ -124,6 +126,7 @@ export class AuthService {
     const [session] = await this.db
       .insert(sessions)
       .values({
+        clinicId,
         userId: user.id,
         expiresAt: new Date(Date.now() + SESSION_TTL_MS),
       })
@@ -133,6 +136,7 @@ export class AuthService {
       {
         sub: user.id,
         jti: session.id,
+        clinicId,
         cpf: user.cpf,
         name: user.name,
         phone: user.phone,

@@ -61,6 +61,10 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('invalid or expired session');
     }
 
+    if (session.clinicId !== request.clinic?.id) {
+      throw new UnauthorizedException('session does not belong to this clinic');
+    }
+
     request.session = result.data;
     return true;
   }

@@ -12,11 +12,11 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 
-export const users = pgTable('users', {
+export const clinics = pgTable('clinics', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 255 }).notNull(),
-  cpf: varchar('cpf', { length: 11 }).notNull().unique(),
-  phone: varchar('phone', { length: 11 }).notNull(),
+  subdomain: varchar('subdomain', { length: 63 }).notNull().unique(),
+  isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -24,6 +24,31 @@ export const users = pgTable('users', {
     .notNull()
     .defaultNow(),
 });
+
+export type Clinic = typeof clinics.$inferSelect;
+export type NewClinic = typeof clinics.$inferInsert;
+
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clinicId: uuid('clinic_id')
+      .notNull()
+      .references(() => clinics.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    cpf: varchar('cpf', { length: 11 }).notNull(),
+    phone: varchar('phone', { length: 11 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('users_clinic_cpf_idx').on(table.clinicId, table.cpf),
+  ],
+);
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -46,6 +71,9 @@ export type NewVerificationCode = typeof verificationCodes.$inferInsert;
 
 export const sessions = pgTable('sessions', {
   id: uuid('id').primaryKey().defaultRandom(),
+  clinicId: uuid('clinic_id')
+    .notNull()
+    .references(() => clinics.id, { onDelete: 'cascade' }),
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -80,8 +108,12 @@ export const educationLevelEnum = pgEnum('education_level', [
 
 export const patients = pgTable('patients', {
   id: uuid('id').primaryKey().defaultRandom(),
+  clinicId: uuid('clinic_id')
+    .notNull()
+    .references(() => clinics.id, { onDelete: 'cascade' }),
   userId: uuid('user_id')
     .notNull()
+    .unique()
     .references(() => users.id, { onDelete: 'cascade' }),
   birthDate: date('birth_date', { mode: 'string' }).notNull(),
   maritalStatus: maritalStatusEnum('marital_status').notNull(),
@@ -116,6 +148,9 @@ export const triageTypeEnum = pgEnum('triage_type', [
 
 export const triages = pgTable('triages', {
   id: uuid('id').primaryKey().defaultRandom(),
+  clinicId: uuid('clinic_id')
+    .notNull()
+    .references(() => clinics.id, { onDelete: 'cascade' }),
   patientId: uuid('patient_id')
     .notNull()
     .references(() => patients.id, { onDelete: 'cascade' }),
