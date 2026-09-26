@@ -146,11 +146,6 @@ export const triageTypeEnum = pgEnum('triage_type', [
   'routine',
 ]);
 
-// Tracks where the patient is in the clinic's flow: they submit the
-// intake form and wait in line ('waiting'), staff analyzes what they
-// submitted ('in_review'), they get called in and are seen by the
-// doctor ('in_progress'), and finally the visit wraps up
-// ('completed'). 'cancelled' covers no-shows/withdrawals.
 export const triageStatusEnum = pgEnum('triage_status', [
   'waiting',
   'in_review',

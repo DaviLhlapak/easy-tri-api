@@ -8,6 +8,13 @@
       "when": 1789563989800,
       "tag": "0000_dapper_white_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790427756597,
+      "tag": "0001_legal_iceman",
+      "breakpoints": true
     }
   ]
 }
