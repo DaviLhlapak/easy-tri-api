@@ -54,23 +54,23 @@ export class TriagesService {
 
     const extraQueries = [];
 
-    if (body.physicalSymptoms) {
+    for (const entry of body.physicalSymptoms) {
       extraQueries.push(
         this.db.insert(triagePhysicalSymptoms).values({
           triageId,
-          bodyPart: body.physicalSymptoms.bodyPart,
-          answers: body.physicalSymptoms.answers,
+          bodyPart: entry.bodyPart,
+          answers: entry.answers,
         }),
       );
     }
 
-    if (body.constitutionalSymptom) {
+    for (const entry of body.constitutionalSymptoms) {
       extraQueries.push(
         this.db.insert(triageConstitutionalSymptoms).values({
           triageId,
-          symptom: body.constitutionalSymptom.symptom,
-          intensity: body.constitutionalSymptom.intensity,
-          quantity: body.constitutionalSymptom.quantity,
+          symptom: entry.symptom,
+          intensity: entry.intensity,
+          quantity: entry.quantity,
         }),
       );
     }
@@ -130,30 +130,34 @@ export class TriagesService {
       throw new NotFoundException('triage not found');
     }
 
-    const [[physicalSymptoms], [constitutionalSymptom], [physicalActivity], [habits]] =
-      await Promise.all([
-        this.db
-          .select()
-          .from(triagePhysicalSymptoms)
-          .where(eq(triagePhysicalSymptoms.triageId, triageId)),
-        this.db
-          .select()
-          .from(triageConstitutionalSymptoms)
-          .where(eq(triageConstitutionalSymptoms.triageId, triageId)),
-        this.db
-          .select()
-          .from(triagePhysicalActivities)
-          .where(eq(triagePhysicalActivities.triageId, triageId)),
-        this.db
-          .select()
-          .from(triageHabits)
-          .where(eq(triageHabits.triageId, triageId)),
-      ]);
+    const [
+      physicalSymptoms,
+      constitutionalSymptoms,
+      [physicalActivity],
+      [habits],
+    ] = await Promise.all([
+      this.db
+        .select()
+        .from(triagePhysicalSymptoms)
+        .where(eq(triagePhysicalSymptoms.triageId, triageId)),
+      this.db
+        .select()
+        .from(triageConstitutionalSymptoms)
+        .where(eq(triageConstitutionalSymptoms.triageId, triageId)),
+      this.db
+        .select()
+        .from(triagePhysicalActivities)
+        .where(eq(triagePhysicalActivities.triageId, triageId)),
+      this.db
+        .select()
+        .from(triageHabits)
+        .where(eq(triageHabits.triageId, triageId)),
+    ]);
 
     return toResponse(
       row.triage,
-      physicalSymptoms ?? null,
-      constitutionalSymptom ?? null,
+      physicalSymptoms,
+      constitutionalSymptoms,
       physicalActivity ?? null,
       habits ?? null,
     );
@@ -162,10 +166,8 @@ export class TriagesService {
 
 function toResponse(
   triage: typeof triages.$inferSelect,
-  physicalSymptoms: typeof triagePhysicalSymptoms.$inferSelect | null,
-  constitutionalSymptom:
-    | typeof triageConstitutionalSymptoms.$inferSelect
-    | null,
+  physicalSymptoms: (typeof triagePhysicalSymptoms.$inferSelect)[],
+  constitutionalSymptoms: (typeof triageConstitutionalSymptoms.$inferSelect)[],
   physicalActivity: typeof triagePhysicalActivities.$inferSelect | null,
   habits: typeof triageHabits.$inferSelect | null,
 ): TriageResponse {
@@ -179,22 +181,15 @@ function toResponse(
     requestMedicalExams: triage.requestMedicalExams,
     createdAt: triage.createdAt.toISOString(),
     updatedAt: triage.updatedAt.toISOString(),
-    physicalSymptoms: physicalSymptoms
-      ? {
-          bodyPart: physicalSymptoms.bodyPart,
-          answers: physicalSymptoms.answers as {
-            questionKey: string;
-            answer: unknown;
-          }[],
-        }
-      : null,
-    constitutionalSymptom: constitutionalSymptom
-      ? {
-          symptom: constitutionalSymptom.symptom,
-          intensity: constitutionalSymptom.intensity,
-          quantity: constitutionalSymptom.quantity,
-        }
-      : null,
+    physicalSymptoms: physicalSymptoms.map((entry) => ({
+      bodyPart: entry.bodyPart,
+      answers: entry.answers as Record<string, unknown>,
+    })),
+    constitutionalSymptoms: constitutionalSymptoms.map((entry) => ({
+      symptom: entry.symptom,
+      intensity: entry.intensity,
+      quantity: entry.quantity ?? undefined,
+    })),
     physicalActivity: physicalActivity
       ? {
           name: physicalActivity.name,

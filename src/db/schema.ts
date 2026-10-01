@@ -189,13 +189,27 @@ export const triageExams = pgTable('triage_exams', {
 export type TriageExam = typeof triageExams.$inferSelect;
 export type NewTriageExam = typeof triageExams.$inferInsert;
 
-export const triagePhysicalSymptoms = pgTable('triage_physical_symptoms', {
-  triageId: uuid('triage_id')
-    .primaryKey()
-    .references(() => triages.id, { onDelete: 'cascade' }),
-  bodyPart: varchar('body_part', { length: 100 }).notNull(),
-  answers: jsonb('answers').notNull().default([]),
-});
+// One row per body part the patient reports (a triage can report
+// several). The underlying questions/answers are stored as a flexible
+// key/value JSON object, since the questionnaire varies by body part
+// and medical type and may change over time without schema changes.
+export const triagePhysicalSymptoms = pgTable(
+  'triage_physical_symptoms',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    triageId: uuid('triage_id')
+      .notNull()
+      .references(() => triages.id, { onDelete: 'cascade' }),
+    bodyPart: varchar('body_part', { length: 100 }).notNull(),
+    answers: jsonb('answers').notNull().default({}),
+  },
+  (table) => [
+    uniqueIndex('triage_physical_symptoms_triage_body_part_idx').on(
+      table.triageId,
+      table.bodyPart,
+    ),
+  ],
+);
 
 export type TriagePhysicalSymptom = typeof triagePhysicalSymptoms.$inferSelect;
 export type NewTriagePhysicalSymptom =
@@ -207,16 +221,27 @@ export const symptomIntensityEnum = pgEnum('symptom_intensity', [
   'severe',
 ]);
 
+// One row per symptom the patient reports (a triage can report
+// several). The symptom itself is a plain string rather than an enum,
+// since the catalog is expected to change over time and enum changes
+// require migrations.
 export const triageConstitutionalSymptoms = pgTable(
   'triage_constitutional_symptoms',
   {
+    id: uuid('id').primaryKey().defaultRandom(),
     triageId: uuid('triage_id')
-      .primaryKey()
+      .notNull()
       .references(() => triages.id, { onDelete: 'cascade' }),
     symptom: varchar('symptom', { length: 100 }).notNull(),
     intensity: symptomIntensityEnum('intensity').notNull(),
     quantity: integer('quantity').notNull().default(1),
   },
+  (table) => [
+    uniqueIndex('triage_constitutional_symptoms_triage_symptom_idx').on(
+      table.triageId,
+      table.symptom,
+    ),
+  ],
 );
 
 export type TriageConstitutionalSymptom =
