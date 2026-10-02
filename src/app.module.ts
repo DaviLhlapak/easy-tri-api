@@ -12,9 +12,24 @@ import { PatientsModule } from './patients/patients.module.js';
 import { TenantMiddleware } from './tenant/tenant.middleware.js';
 import { TenantModule } from './tenant/tenant.module.js';
 import { TriagesModule } from './triages/triages.module.js';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import configuration from './config/configuration.js';
+import { StorageModule } from '@nestjs/storage';
+import { createStorageOptions } from './storage/storage.config.js';
 
 @Module({
-  imports: [DbModule, TenantModule, AuthModule, PatientsModule, TriagesModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    StorageModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: createStorageOptions,
+    }),
+    DbModule,
+    TenantModule,
+    AuthModule,
+    PatientsModule,
+    TriagesModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
