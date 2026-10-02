@@ -234,7 +234,7 @@ export const triageConstitutionalSymptoms = pgTable(
       .references(() => triages.id, { onDelete: 'cascade' }),
     symptom: varchar('symptom', { length: 100 }).notNull(),
     intensity: symptomIntensityEnum('intensity').notNull(),
-    quantity: integer('quantity').notNull().default(1),
+    quantity: integer('quantity'),
   },
   (table) => [
     uniqueIndex('triage_constitutional_symptoms_triage_symptom_idx').on(

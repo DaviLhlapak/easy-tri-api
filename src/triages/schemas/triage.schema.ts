@@ -36,7 +36,7 @@ const physicalSymptomEntrySchema = z.object({
 const constitutionalSymptomEntrySchema = z.object({
   symptom: z.string().trim().min(1).max(100),
   intensity: z.enum(symptomIntensityValues),
-  quantity: z.number().int().min(1).default(1),
+  quantity: z.number().int().min(1).optional(),
 });
 
 const physicalActivitySchema = z.object({
