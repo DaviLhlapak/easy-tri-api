@@ -181,18 +181,20 @@ export type Triage = typeof triages.$inferSelect;
 export type NewTriage = typeof triages.$inferInsert;
 
 export const triageExams = pgTable('triage_exams', {
+  id: uuid('id').primaryKey().defaultRandom(),
   triageId: uuid('triage_id')
-    .primaryKey()
+    .notNull()
     .references(() => triages.id, { onDelete: 'cascade' }),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  mimeType: varchar('mime_type', { length: 100 }).notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  storageKey: varchar('storage_key', { length: 500 }).notNull(),
+  url: text('url').notNull(),
 });
 
 export type TriageExam = typeof triageExams.$inferSelect;
 export type NewTriageExam = typeof triageExams.$inferInsert;
 
-// One row per body part the patient reports (a triage can report
-// several). The underlying questions/answers are stored as a flexible
-// key/value JSON object, since the questionnaire varies by body part
-// and medical type and may change over time without schema changes.
 export const triagePhysicalSymptoms = pgTable(
   'triage_physical_symptoms',
   {
@@ -221,10 +223,6 @@ export const symptomIntensityEnum = pgEnum('symptom_intensity', [
   'severe',
 ]);
 
-// One row per symptom the patient reports (a triage can report
-// several). The symptom itself is a plain string rather than an enum,
-// since the catalog is expected to change over time and enum changes
-// require migrations.
 export const triageConstitutionalSymptoms = pgTable(
   'triage_constitutional_symptoms',
   {
