@@ -59,8 +59,8 @@ const habitsSchema = z.object({
 export const createTriageBodySchema = z.object({
   triageType: z.enum(triageTypeValues),
   complaint: z.string().trim().min(1).max(2000).nullish(),
-  renewPrescription: z.boolean().default(false),
-  requestMedicalExams: z.boolean().default(false),
+  renewPrescription: z.string().transform((value) => value === 'true'),
+  requestMedicalExams: z.string().transform((value) => value === 'true'),
   physicalSymptoms: z.array(physicalSymptomEntrySchema).default([]),
   constitutionalSymptoms: z.array(constitutionalSymptomEntrySchema).default([]),
   physicalActivity: physicalActivitySchema.nullish(),

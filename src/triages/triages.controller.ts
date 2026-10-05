@@ -4,6 +4,8 @@ import {
   Get,
   Param,
   Post,
+  UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -20,20 +22,53 @@ import {
   type CreateTriageBody,
 } from './schemas/triage.schema.js';
 import { TriagesService } from './triages.service.js';
+import {
+  InjectDisk,
+  StorageDisk,
+  StoredUpload,
+  uploadToDisk,
+} from '@nestjs/storage';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import {
+  ALLOWED_EXAM_MIME_TYPES,
+  MAX_EXAM_FILE_SIZE_BYTES,
+  MAX_EXAM_FILES_PER_UPLOAD,
+} from './exam-file-rules.js';
 
 @Controller('triages')
 @UseGuards(AuthGuard)
 export class TriagesController {
-  constructor(private readonly triagesService: TriagesService) {}
+  constructor(
+    private readonly triagesService: TriagesService,
+    @InjectDisk('exams') private readonly exams: StorageDisk,
+  ) {}
 
   @Post()
+  @UseInterceptors(
+    FilesInterceptor('exams', MAX_EXAM_FILES_PER_UPLOAD, {
+      storage: uploadToDisk({
+        disk: 'exams',
+        contentTypes: ALLOWED_EXAM_MIME_TYPES,
+      }),
+      limits: {
+        fileSize: MAX_EXAM_FILE_SIZE_BYTES,
+        files: MAX_EXAM_FILES_PER_UPLOAD,
+      },
+    }),
+  )
   @UseInterceptors(new ZodResponseInterceptor(triageResponseSchema))
   create(
     @CurrentClinic() clinic: Clinic,
     @Session() session: SessionPayload,
     @Body(new ZodValidationPipe(createTriageBodySchema)) body: CreateTriageBody,
+    @UploadedFiles() exams: StoredUpload[] | undefined,
   ) {
-    return this.triagesService.createTriage(clinic.id, session.sub, body);
+    return this.triagesService.createTriage(
+      clinic.id,
+      session.sub,
+      body,
+      exams,
+    );
   }
 
   @Get(':id')

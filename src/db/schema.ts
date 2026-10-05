@@ -189,7 +189,6 @@ export const triageExams = pgTable('triage_exams', {
   mimeType: varchar('mime_type', { length: 100 }).notNull(),
   sizeBytes: integer('size_bytes').notNull(),
   storageKey: varchar('storage_key', { length: 500 }).notNull(),
-  url: text('url').notNull(),
 });
 
 export type TriageExam = typeof triageExams.$inferSelect;

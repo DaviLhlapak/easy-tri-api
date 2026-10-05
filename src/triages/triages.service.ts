@@ -5,6 +5,7 @@ import { DRIZZLE, type Database } from '../db/db.module.js';
 import {
   patients,
   triageConstitutionalSymptoms,
+  triageExams,
   triageHabits,
   triagePhysicalActivities,
   triagePhysicalSymptoms,
@@ -14,6 +15,7 @@ import type {
   CreateTriageBody,
   TriageResponse,
 } from './schemas/triage.schema.js';
+import { StoredUpload } from '@nestjs/storage';
 
 @Injectable()
 export class TriagesService {
@@ -23,6 +25,7 @@ export class TriagesService {
     clinicId: string,
     userId: string,
     body: CreateTriageBody,
+    exams?: StoredUpload[],
   ): Promise<TriageResponse> {
     const [patient] = await this.db
       .select()
@@ -75,6 +78,20 @@ export class TriagesService {
       );
     }
 
+    if (exams) {
+      for (const exam of exams) {
+        extraQueries.push(
+          this.db.insert(triageExams).values({
+            triageId,
+            fileName: exam.originalname,
+            mimeType: exam.mimetype,
+            sizeBytes: exam.size,
+            storageKey: exam.key,
+          }),
+        );
+      }
+    }
+
     if (body.physicalActivity) {
       extraQueries.push(
         this.db.insert(triagePhysicalActivities).values({
@@ -102,8 +119,6 @@ export class TriagesService {
       );
     }
 
-    // The neon-http driver doesn't support db.transaction(), but batch()
-    // runs every query as a single atomic transaction over one HTTP call.
     await this.db.batch([...queries, ...extraQueries] as any);
 
     return this.getTriageById(clinicId, userId, triageId);

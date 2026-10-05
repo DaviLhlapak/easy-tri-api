@@ -7,19 +7,19 @@ export function createStorageOptions(
   const appUrl = config.getOrThrow<string>('appUrl');
   const root = config.getOrThrow<string>('storage.root');
   return {
-    default: 'private',
+    default: 'exams',
     disks: {
-      photos: new LocalDisk({
-        root: `${root}/photos`,
-        publicUrl: `${appUrl}/photos`,
+      exams: new LocalDisk({
+        root: `${root}/exams`,
+        publicUrl: `${appUrl}/exams`,
       }),
-      private: new LocalDisk({
-        root: `${root}/private`,
-        signedUrls: {
-          baseUrl: `${appUrl}/files`,
-          keys: [config.getOrThrow<string>('storage.signingKey')],
-        },
-      }),
+      // private: new LocalDisk({
+      //   root: `${root}/private`,
+      //   signedUrls: {
+      //     baseUrl: `${appUrl}/files`,
+      //     keys: [config.getOrThrow<string>('storage.signingKey')],
+      //   },
+      // }),
     },
   };
 }
