@@ -57,25 +57,29 @@ export class TriagesService {
 
     const extraQueries = [];
 
-    for (const entry of body.physicalSymptoms) {
-      extraQueries.push(
-        this.db.insert(triagePhysicalSymptoms).values({
-          triageId,
-          bodyPart: entry.bodyPart,
-          answers: entry.answers,
-        }),
-      );
+    if (body.physicalSymptoms) {
+      for (const entry of body.physicalSymptoms) {
+        extraQueries.push(
+          this.db.insert(triagePhysicalSymptoms).values({
+            triageId,
+            bodyPart: entry.bodyPart,
+            answers: entry.answers,
+          }),
+        );
+      }
     }
 
-    for (const entry of body.constitutionalSymptoms) {
-      extraQueries.push(
-        this.db.insert(triageConstitutionalSymptoms).values({
-          triageId,
-          symptom: entry.symptom,
-          intensity: entry.intensity,
-          quantity: entry.quantity,
-        }),
-      );
+    if (body.constitutionalSymptoms) {
+      for (const entry of body.constitutionalSymptoms) {
+        extraQueries.push(
+          this.db.insert(triageConstitutionalSymptoms).values({
+            triageId,
+            symptom: entry.symptom,
+            intensity: entry.intensity,
+            quantity: entry.quantity,
+          }),
+        );
+      }
     }
 
     if (exams) {

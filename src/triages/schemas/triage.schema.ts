@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { preprocessJsonFromFormData } from '../../common/utils/formdata.js';
 
 export const triageTypeValues = [
   'new',
@@ -7,11 +8,6 @@ export const triageTypeValues = [
   'routine',
 ] as const;
 
-// Reflects the patient's position in the clinic's flow: they submit the
-// intake form and wait in line ('waiting'), staff analyzes what they
-// submitted ('in_review'), they get called in and are seen by the doctor
-// ('in_progress'), and finally the visit wraps up ('completed').
-// 'cancelled' covers no-shows/withdrawals.
 export const triageStatusValues = [
   'waiting',
   'in_review',
@@ -25,9 +21,6 @@ export const symptomIntensityValues = ['mild', 'moderate', 'severe'] as const;
 export const alcoholStatusValues = ['never', 'former', 'current'] as const;
 export const smokingStatusValues = ['never', 'former', 'current'] as const;
 
-// A patient can select several body parts, each with its own answers.
-// The questionnaire varies by body part and medical type, so answers
-// are a flexible key/value map rather than a fixed set of fields.
 const physicalSymptomEntrySchema = z.object({
   bodyPart: z.string().trim().min(1).max(100),
   answers: z.record(z.string().trim().min(1).max(100), z.unknown()),
@@ -61,10 +54,19 @@ export const createTriageBodySchema = z.object({
   complaint: z.string().trim().min(1).max(2000).nullish(),
   renewPrescription: z.string().transform((value) => value === 'true'),
   requestMedicalExams: z.string().transform((value) => value === 'true'),
-  physicalSymptoms: z.array(physicalSymptomEntrySchema).default([]),
-  constitutionalSymptoms: z.array(constitutionalSymptomEntrySchema).default([]),
-  physicalActivity: physicalActivitySchema.nullish(),
-  habits: habitsSchema.nullish(),
+  physicalSymptoms: z.preprocess(
+    preprocessJsonFromFormData,
+    z.array(physicalSymptomEntrySchema).default([]).nullish(),
+  ),
+  constitutionalSymptoms: z.preprocess(
+    preprocessJsonFromFormData,
+    z.array(constitutionalSymptomEntrySchema).default([]).nullish(),
+  ),
+  physicalActivity: z.preprocess(
+    preprocessJsonFromFormData,
+    physicalActivitySchema.nullish(),
+  ),
+  habits: z.preprocess(preprocessJsonFromFormData, habitsSchema.nullish()),
 });
 
 export type CreateTriageBody = z.infer<typeof createTriageBodySchema>;
