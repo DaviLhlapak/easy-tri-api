@@ -16,6 +16,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './config/configuration.js';
 import { StorageModule } from '@nestjs/storage';
 import { createStorageOptions } from './storage/storage.config.js';
+import { DoctorsModule } from './doctors/doctors.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { createStorageOptions } from './storage/storage.config.js';
     AuthModule,
     PatientsModule,
     TriagesModule,
+    DoctorsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

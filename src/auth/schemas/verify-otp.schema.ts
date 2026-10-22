@@ -13,6 +13,7 @@ export const verifyOtpResponseSchema = z.object({
     name: z.string(),
     cpf: z.string().regex(/^\*{3}\.\*{3}\.\*{3}-\d{2}$/),
     phone: z.string().min(10).max(11),
+    type: z.enum(['doctor', 'patient', 'guest']),
   }),
 });
 

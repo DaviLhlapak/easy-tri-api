@@ -5,6 +5,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -291,3 +292,57 @@ export const triageHabits = pgTable('triage_habits', {
 
 export type TriageHabits = typeof triageHabits.$inferSelect;
 export type NewTriageHabits = typeof triageHabits.$inferInsert;
+
+export const doctors = pgTable('doctors', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  clinicId: uuid('clinic_id')
+    .notNull()
+    .references(() => clinics.id, { onDelete: 'cascade' }),
+  birthDate: date('birth_date', { mode: 'string' }).notNull(),
+  gender: genderEnum('gender').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type Doctor = typeof doctors.$inferSelect;
+export type NewDoctor = typeof doctors.$inferInsert;
+
+export const medicalSpecialties = pgTable('medical_specialties', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  clinicId: uuid('clinic_id')
+    .notNull()
+    .references(() => clinics.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type MedicalSpecialty = typeof medicalSpecialties.$inferSelect;
+export type NewMedicalSpecialty = typeof medicalSpecialties.$inferInsert;
+
+export const doctorsToMedicalSpecialties = pgTable(
+  'doctors_to_medical_specialties',
+  {
+    doctorId: uuid('doctor_id')
+      .notNull()
+      .references(() => doctors.id, { onDelete: 'cascade' }),
+    medicalSpecialtyId: uuid('medical_specialty_id')
+      .notNull()
+      .references(() => medicalSpecialties.id, { onDelete: 'cascade' }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.doctorId, table.medicalSpecialtyId] }),
+  ],
+);

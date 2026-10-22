@@ -8,7 +8,13 @@ import { JwtService } from '@nestjs/jwt';
 import { and, eq } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
 import { DRIZZLE, type Database } from '../db/db.module.js';
-import { sessions, users, verificationCodes } from '../db/schema.js';
+import {
+  doctors,
+  patients,
+  sessions,
+  users,
+  verificationCodes,
+} from '../db/schema.js';
 import { maskCpf } from '../common/utils/mask.js';
 import {
   OTP_DELIVERY_PORT,
@@ -113,10 +119,26 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('user not found');
     }
-  
+
     if (user.clinicId !== clinicId) {
       throw new UnauthorizedException('invalid requestId');
     }
+
+    const [hasPatientOrDoctor] = await this.db
+      .select({
+        patientClinicId: patients.clinicId,
+        doctorClinicId: doctors.clinicId,
+      })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .leftJoin(patients, eq(patients.userId, users.id))
+      .leftJoin(doctors, eq(doctors.userId, users.id));
+
+    const userType = hasPatientOrDoctor.doctorClinicId
+      ? 'doctor'
+      : hasPatientOrDoctor.patientClinicId
+        ? 'patient'
+        : 'guest';
 
     await this.db
       .update(verificationCodes)
@@ -140,6 +162,7 @@ export class AuthService {
         cpf: user.cpf,
         name: user.name,
         phone: user.phone,
+        type: userType,
       },
       { expiresIn: SESSION_TTL },
     );
@@ -150,6 +173,7 @@ export class AuthService {
         name: user.name,
         cpf: maskCpf(user.cpf),
         phone: user.phone,
+        type: userType,
       },
     };
   }
