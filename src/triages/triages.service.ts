@@ -130,20 +130,23 @@ export class TriagesService {
 
   async getTriageById(
     clinicId: string,
-    userId: string,
+    userId: string | null,
     triageId: string,
   ): Promise<TriageResponse> {
+    const conditions = [
+      eq(triages.id, triageId),
+      eq(triages.clinicId, clinicId),
+    ];
+
+    if (userId) {
+      conditions.push(eq(patients.userId, userId));
+    }
+
     const [row] = await this.db
       .select({ triage: triages, patient: patients })
       .from(triages)
       .innerJoin(patients, eq(triages.patientId, patients.id))
-      .where(
-        and(
-          eq(triages.id, triageId),
-          eq(triages.clinicId, clinicId),
-          eq(patients.userId, userId),
-        ),
-      );
+      .where(and(...conditions));
 
     if (!row) {
       throw new NotFoundException('triage not found');

@@ -9,8 +9,10 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Roles } from '../auth/decorators/roles.decorator.js';
 import { Session } from '../auth/decorators/session.decorator.js';
 import { AuthGuard } from '../auth/guards/auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
 import type { SessionPayload } from '../auth/schemas/session.schema.js';
 import { ZodResponseInterceptor } from '../common/interceptors/zod-response.interceptor.js';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
@@ -36,7 +38,7 @@ import {
 } from './exam-file-rules.js';
 
 @Controller('triages')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 export class TriagesController {
   constructor(
     private readonly triagesService: TriagesService,
@@ -44,6 +46,7 @@ export class TriagesController {
   ) {}
 
   @Post()
+  @Roles('patient', 'guest')
   @UseInterceptors(
     FilesInterceptor('exams', MAX_EXAM_FILES_PER_UPLOAD, {
       storage: uploadToDisk({
@@ -72,12 +75,17 @@ export class TriagesController {
   }
 
   @Get(':id')
+  @Roles('patient', 'doctor')
   @UseInterceptors(new ZodResponseInterceptor(triageResponseSchema))
   getById(
     @CurrentClinic() clinic: Clinic,
     @Session() session: SessionPayload,
     @Param('id') id: string,
   ) {
-    return this.triagesService.getTriageById(clinic.id, session.sub, id);
+    return this.triagesService.getTriageById(
+      clinic.id,
+      session.type === 'patient' ? session.sub : null,
+      id,
+    );
   }
 }

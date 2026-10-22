@@ -6,8 +6,10 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Roles } from '../auth/decorators/roles.decorator.js';
 import { Session } from '../auth/decorators/session.decorator.js';
 import { AuthGuard } from '../auth/guards/auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
 import type { SessionPayload } from '../auth/schemas/session.schema.js';
 import { ZodResponseInterceptor } from '../common/interceptors/zod-response.interceptor.js';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
@@ -21,7 +23,8 @@ import type { Clinic } from '../db/schema.js';
 import { DoctorsService } from './doctors.service.js';
 
 @Controller('doctors')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('doctor')
 export class DoctorsController {
   constructor(private readonly doctorsService: DoctorsService) {}
 

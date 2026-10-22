@@ -6,8 +6,10 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Roles } from '../auth/decorators/roles.decorator.js';
 import { Session } from '../auth/decorators/session.decorator.js';
 import { AuthGuard } from '../auth/guards/auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
 import type { SessionPayload } from '../auth/schemas/session.schema.js';
 import { ZodResponseInterceptor } from '../common/interceptors/zod-response.interceptor.js';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
@@ -21,11 +23,12 @@ import {
 } from './schemas/patient-profile.schema.js';
 
 @Controller('patients')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 export class PatientsController {
   constructor(private readonly patientsService: PatientsService) {}
 
   @Get('me')
+  @Roles('patient')
   @UseInterceptors(new ZodResponseInterceptor(patientProfileResponseSchema))
   getMyProfile(
     @CurrentClinic() clinic: Clinic,
@@ -35,6 +38,7 @@ export class PatientsController {
   }
 
   @Put('me')
+  @Roles('patient', 'guest')
   @UseInterceptors(new ZodResponseInterceptor(patientProfileResponseSchema))
   upsertMyProfile(
     @CurrentClinic() clinic: Clinic,
