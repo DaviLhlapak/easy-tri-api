@@ -1,11 +1,13 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module.js';
-import { patients } from '../db/schema.js';
+import { patients, users } from '../db/schema.js';
 import type {
   PatientProfileResponse,
   UpsertPatientProfileBody,
 } from './schemas/patient-profile.schema.js';
+import { PatientsResponse } from './schemas/patients.schema.js';
+import { maskCpf, maskPhone } from '../common/utils/mask.js';
 
 @Injectable()
 export class PatientsService {
@@ -42,6 +44,28 @@ export class PatientsService {
       .returning();
 
     return toResponse(profile);
+  }
+
+  async getPatients(clinicId: string): Promise<PatientsResponse> {
+    const patientsList = await this.db
+      .select({
+        id: patients.id,
+        name: users.name,
+        cpf: users.cpf,
+        phone: users.phone,
+        birthDate: patients.birthDate,
+        updatedAt: patients.updatedAt,
+      })
+      .from(patients)
+      .where(and(eq(patients.clinicId, clinicId)))
+      .innerJoin(users, eq(users.id, patients.userId));
+
+    return patientsList.map((patient) => ({
+      ...patient,
+      cpf: maskCpf(patient.cpf),
+      phone: maskPhone(patient.phone),
+      updatedAt: patient.updatedAt.toISOString(),
+    }));
   }
 }
 

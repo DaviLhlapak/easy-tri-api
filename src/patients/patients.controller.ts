@@ -21,6 +21,7 @@ import {
   upsertPatientProfileBodySchema,
   type UpsertPatientProfileBody,
 } from './schemas/patient-profile.schema.js';
+import { patientsResponseSchema } from './schemas/patients.schema.js';
 
 @Controller('patients')
 @UseGuards(AuthGuard, RolesGuard)
@@ -47,5 +48,12 @@ export class PatientsController {
     body: UpsertPatientProfileBody,
   ) {
     return this.patientsService.upsertProfile(clinic.id, session.sub, body);
+  }
+
+  @Get()
+  @Roles('doctor')
+  @UseInterceptors(new ZodResponseInterceptor(patientsResponseSchema))
+  getPatients(@CurrentClinic() clinic: Clinic) {
+    return this.patientsService.getPatients(clinic.id);
   }
 }
