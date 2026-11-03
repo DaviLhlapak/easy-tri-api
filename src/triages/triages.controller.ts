@@ -4,7 +4,6 @@ import {
   Get,
   Param,
   Post,
-  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
@@ -30,12 +29,13 @@ import {
   StoredUpload,
   uploadToDisk,
 } from '@nestjs/storage';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import {
   ALLOWED_EXAM_MIME_TYPES,
   MAX_EXAM_FILE_SIZE_BYTES,
   MAX_EXAM_FILES_PER_UPLOAD,
 } from './exam-file-rules.js';
+import { triagesResponseSchema } from './schemas/triages.schema.js';
 
 @Controller('triages')
 @UseGuards(AuthGuard, RolesGuard)
@@ -75,17 +75,16 @@ export class TriagesController {
   }
 
   @Get(':id')
-  @Roles('patient', 'doctor')
+  @Roles('doctor')
   @UseInterceptors(new ZodResponseInterceptor(triageResponseSchema))
-  getById(
-    @CurrentClinic() clinic: Clinic,
-    @Session() session: SessionPayload,
-    @Param('id') id: string,
-  ) {
-    return this.triagesService.getTriageById(
-      clinic.id,
-      session.type === 'patient' ? session.sub : null,
-      id,
-    );
+  getById(@CurrentClinic() clinic: Clinic, @Param('id') id: string) {
+    return this.triagesService.getTriageById(clinic.id, id);
+  }
+
+  @Get()
+  @Roles('doctor')
+  @UseInterceptors(new ZodResponseInterceptor(triagesResponseSchema))
+  getTriages(@CurrentClinic() clinic: Clinic) {
+    return this.triagesService.getTriages(clinic.id);
   }
 }

@@ -10,12 +10,15 @@ import {
   triagePhysicalActivities,
   triagePhysicalSymptoms,
   triages,
+  users,
 } from '../db/schema.js';
 import type {
   CreateTriageBody,
   TriageResponse,
 } from './schemas/triage.schema.js';
 import { StoredUpload } from '@nestjs/storage';
+import { TriagesResponse } from './schemas/triages.schema.js';
+import { maskCpf } from '../common/utils/mask.js';
 
 @Injectable()
 export class TriagesService {
@@ -125,28 +128,18 @@ export class TriagesService {
 
     await this.db.batch([...queries, ...extraQueries] as any);
 
-    return this.getTriageById(clinicId, userId, triageId);
+    return this.getTriageById(clinicId, triageId);
   }
 
   async getTriageById(
     clinicId: string,
-    userId: string | null,
     triageId: string,
   ): Promise<TriageResponse> {
-    const conditions = [
-      eq(triages.id, triageId),
-      eq(triages.clinicId, clinicId),
-    ];
-
-    if (userId) {
-      conditions.push(eq(patients.userId, userId));
-    }
-
     const [row] = await this.db
       .select({ triage: triages, patient: patients })
       .from(triages)
       .innerJoin(patients, eq(triages.patientId, patients.id))
-      .where(and(...conditions));
+      .where(and(eq(triages.id, triageId), eq(triages.clinicId, clinicId)));
 
     if (!row) {
       throw new NotFoundException('triage not found');
@@ -183,6 +176,30 @@ export class TriagesService {
       physicalActivity ?? null,
       habits ?? null,
     );
+  }
+
+  async getTriages(clinicId: string): Promise<TriagesResponse> {
+    const triagesList = await this.db
+      .select({
+        id: triages.id,
+        name: users.name,
+        cpf: users.cpf,
+        triageType: triages.triageType,
+        status: triages.status,
+        createdAt: triages.createdAt,
+        renewPrescription: triages.renewPrescription,
+        requestMedicalExams: triages.requestMedicalExams,
+      })
+      .from(triages)
+      .innerJoin(patients, eq(triages.patientId, patients.id))
+      .innerJoin(users, eq(users.id, patients.userId))
+      .where(eq(triages.clinicId, clinicId));
+
+    return triagesList.map((triage) => ({
+      ...triage,
+      cpf: maskCpf(triage.cpf),
+      createdAt: triage.createdAt.toISOString(),
+    }));
   }
 }
 
