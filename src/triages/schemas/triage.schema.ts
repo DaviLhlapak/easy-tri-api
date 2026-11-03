@@ -91,3 +91,11 @@ export const triageResponseSchema = z.object({
 });
 
 export type TriageResponse = z.infer<typeof triageResponseSchema>;
+
+export const updateTriageStatusBodySchema = z.object({
+  status: z.enum(triageStatusValues),
+});
+
+export type UpdateTriageStatusBody = z.infer<
+  typeof updateTriageStatusBodySchema
+>;

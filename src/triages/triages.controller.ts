@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   UploadedFiles,
   UseGuards,
@@ -20,7 +21,9 @@ import { CurrentClinic } from '../tenant/decorators/current-clinic.decorator.js'
 import {
   createTriageBodySchema,
   triageResponseSchema,
+  updateTriageStatusBodySchema,
   type CreateTriageBody,
+  type UpdateTriageStatusBody,
 } from './schemas/triage.schema.js';
 import { TriagesService } from './triages.service.js';
 import {
@@ -35,7 +38,10 @@ import {
   MAX_EXAM_FILE_SIZE_BYTES,
   MAX_EXAM_FILES_PER_UPLOAD,
 } from './exam-file-rules.js';
-import { triagesResponseSchema } from './schemas/triages.schema.js';
+import {
+  triagesPendingCountResponseSchema,
+  triagesResponseSchema,
+} from './schemas/triages.schema.js';
 
 @Controller('triages')
 @UseGuards(AuthGuard, RolesGuard)
@@ -72,6 +78,27 @@ export class TriagesController {
       body,
       exams,
     );
+  }
+
+  @Patch(':id/status')
+  @Roles('doctor')
+  @UseInterceptors(new ZodResponseInterceptor(triageResponseSchema))
+  updateStatus(
+    @CurrentClinic() clinic: Clinic,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(updateTriageStatusBodySchema))
+    body: UpdateTriageStatusBody,
+  ) {
+    return this.triagesService.updateTriageStatus(clinic.id, id, body);
+  }
+
+  @Get('pending-count')
+  @Roles('doctor')
+  @UseInterceptors(
+    new ZodResponseInterceptor(triagesPendingCountResponseSchema),
+  )
+  getPendingCount(@CurrentClinic() clinic: Clinic) {
+    return this.triagesService.getPendingTriagesCount(clinic.id);
   }
 
   @Get(':id')

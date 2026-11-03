@@ -15,3 +15,11 @@ export const triagesResponseSchema = z
   .array();
 
 export type TriagesResponse = z.infer<typeof triagesResponseSchema>;
+
+export const triagesPendingCountResponseSchema = z.object({
+  count: z.number().int().nonnegative(),
+});
+
+export type TriagesPendingCountResponse = z.infer<
+  typeof triagesPendingCountResponseSchema
+>;

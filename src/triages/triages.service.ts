@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { DRIZZLE, type Database } from '../db/db.module.js';
 import {
@@ -15,9 +15,13 @@ import {
 import type {
   CreateTriageBody,
   TriageResponse,
+  UpdateTriageStatusBody,
 } from './schemas/triage.schema.js';
 import { StoredUpload } from '@nestjs/storage';
-import { TriagesResponse } from './schemas/triages.schema.js';
+import type {
+  TriagesPendingCountResponse,
+  TriagesResponse,
+} from './schemas/triages.schema.js';
 import { maskCpf } from '../common/utils/mask.js';
 
 @Injectable()
@@ -200,6 +204,40 @@ export class TriagesService {
       cpf: maskCpf(triage.cpf),
       createdAt: triage.createdAt.toISOString(),
     }));
+  }
+
+  async updateTriageStatus(
+    clinicId: string,
+    triageId: string,
+    body: UpdateTriageStatusBody,
+  ): Promise<TriageResponse> {
+    const [updated] = await this.db
+      .update(triages)
+      .set({ status: body.status, updatedAt: new Date() })
+      .where(and(eq(triages.id, triageId), eq(triages.clinicId, clinicId)))
+      .returning();
+
+    if (!updated) {
+      throw new NotFoundException('triage not found');
+    }
+
+    return this.getTriageById(clinicId, triageId);
+  }
+
+  async getPendingTriagesCount(
+    clinicId: string,
+  ): Promise<TriagesPendingCountResponse> {
+    const [result] = await this.db
+      .select({ count: count() })
+      .from(triages)
+      .where(
+        and(
+          eq(triages.clinicId, clinicId),
+          inArray(triages.status, ['waiting', 'in_review']),
+        ),
+      );
+
+    return { count: result?.count ?? 0 };
   }
 }
 
