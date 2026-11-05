@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { preprocessJsonFromFormData } from '../../common/utils/formdata.js';
+import { patientProfileResponseSchema } from '../../patients/schemas/patient-profile.schema.js';
+import { meResponseSchema } from '../../auth/schemas/session.schema.js';
 
 export const triageTypeValues = [
   'new',
@@ -88,6 +90,8 @@ export const triageResponseSchema = z.object({
     .default([]),
   physicalActivity: physicalActivitySchema.nullable(),
   habits: habitsSchema.nullable(),
+  user: meResponseSchema,
+  patient: patientProfileResponseSchema,
 });
 
 export type TriageResponse = z.infer<typeof triageResponseSchema>;

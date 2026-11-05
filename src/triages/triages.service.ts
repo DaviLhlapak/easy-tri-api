@@ -22,7 +22,7 @@ import type {
   TriagesPendingCountResponse,
   TriagesResponse,
 } from './schemas/triages.schema.js';
-import { maskCpf } from '../common/utils/mask.js';
+import { maskCpf, maskPhone } from '../common/utils/mask.js';
 
 @Injectable()
 export class TriagesService {
@@ -140,9 +140,10 @@ export class TriagesService {
     triageId: string,
   ): Promise<TriageResponse> {
     const [row] = await this.db
-      .select({ triage: triages, patient: patients })
+      .select({ triage: triages, patient: patients, user: users })
       .from(triages)
       .innerJoin(patients, eq(triages.patientId, patients.id))
+      .innerJoin(users, eq(users.id, patients.userId))
       .where(and(eq(triages.id, triageId), eq(triages.clinicId, clinicId)));
 
     if (!row) {
@@ -175,6 +176,8 @@ export class TriagesService {
 
     return toResponse(
       row.triage,
+      row.patient,
+      row.user,
       physicalSymptoms,
       constitutionalSymptoms,
       physicalActivity ?? null,
@@ -243,6 +246,8 @@ export class TriagesService {
 
 function toResponse(
   triage: typeof triages.$inferSelect,
+  patient: typeof patients.$inferSelect,
+  user: typeof users.$inferSelect,
   physicalSymptoms: (typeof triagePhysicalSymptoms.$inferSelect)[],
   constitutionalSymptoms: (typeof triageConstitutionalSymptoms.$inferSelect)[],
   physicalActivity: typeof triagePhysicalActivities.$inferSelect | null,
@@ -286,5 +291,15 @@ function toResponse(
           dietaryRestrictions: habits.dietaryRestrictions,
         }
       : null,
+    user: {
+      ...user,
+      cpf: maskCpf(user.cpf),
+      phone: maskPhone(user.phone),
+    },
+    patient: {
+      ...patient,
+      createdAt: patient.createdAt.toISOString(),
+      updatedAt: patient.updatedAt.toISOString(),
+    },
   };
 }
