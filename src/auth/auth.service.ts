@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
 import { DRIZZLE, type Database } from '../db/db.module.js';
 import {
@@ -25,6 +25,7 @@ import type {
   RequestOtpResponse,
 } from './schemas/request-otp.schema.js';
 import type { VerifyOtpResponse } from './schemas/verify-otp.schema.js';
+import type { LogoutResponse } from './schemas/logout.schema.js';
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const SESSION_TTL_MS = 60 * 60 * 1000;
@@ -175,7 +176,24 @@ export class AuthService {
         phone: user.phone,
         type: userType,
       },
+      expiresAt: session.expiresAt.toISOString(),
     };
+  }
+
+  async logout(clinicId: string, sessionId: string): Promise<LogoutResponse> {
+    const [session] = await this.db
+      .update(sessions)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(
+          eq(sessions.id, sessionId),
+          eq(sessions.clinicId, clinicId),
+          isNull(sessions.revokedAt),
+        ),
+      )
+      .returning();
+
+    return { revoked: Boolean(session) };
   }
 }
 

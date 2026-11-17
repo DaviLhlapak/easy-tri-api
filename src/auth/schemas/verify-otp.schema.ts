@@ -15,6 +15,7 @@ export const verifyOtpResponseSchema = z.object({
     phone: z.string().min(10).max(11),
     type: z.enum(['doctor', 'patient', 'guest']),
   }),
+  expiresAt: z.iso.datetime(),
 });
 
 export type VerifyOtpResponse = z.infer<typeof verifyOtpResponseSchema>;

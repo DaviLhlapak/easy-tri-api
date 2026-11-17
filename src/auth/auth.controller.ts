@@ -28,6 +28,7 @@ import {
   meResponseSchema,
   type SessionPayload,
 } from './schemas/session.schema.js';
+import { logoutResponseSchema } from './schemas/logout.schema.js';
 
 @Controller('auth')
 export class AuthController {
@@ -61,5 +62,12 @@ export class AuthController {
       name: session.name,
       phone: session.phone,
     };
+  }
+
+  @Post('logout')
+  @UseGuards(AuthGuard)
+  @UseInterceptors(new ZodResponseInterceptor(logoutResponseSchema))
+  logout(@CurrentClinic() clinic: Clinic, @Session() session: SessionPayload) {
+    return this.authService.logout(clinic.id, session.jti);
   }
 }

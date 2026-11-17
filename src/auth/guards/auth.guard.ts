@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { Request } from 'express';
 import { DRIZZLE, type Database } from '../../db/db.module.js';
 import { sessions } from '../../db/schema.js';
@@ -51,13 +51,9 @@ export class AuthGuard implements CanActivate {
     const [session] = await this.db
       .select()
       .from(sessions)
-      .where(eq(sessions.id, result.data.jti));
+      .where(and(eq(sessions.id, result.data.jti), isNull(sessions.revokedAt)));
 
-    if (
-      !session ||
-      session.revokedAt ||
-      Date.now() > session.expiresAt.getTime()
-    ) {
+    if (!session || Date.now() > session.expiresAt.getTime()) {
       throw new UnauthorizedException('invalid or expired session');
     }
 
